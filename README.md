@@ -31,8 +31,8 @@ Before attempting to create a stack with the template, a few prerequisites shoul
   * [c5n.9xlarge](./content/c5n.9xlarge-affinity-interrupts.txt)
   * [c5n.18xlarge](./content/c5n.18xlarge-affinity-interrupts.txt)
   * [c6i.4xlarge](./content/c6i.4xlarge-affinity-interrupts.txt)
-  * [c6i.9xlarge](./content/c6i.8xlarge-affinity-interrupts.txt)
-  * [c6i.18xlarge](./content/c6i.16xlarge-affinity-interrupts.txt)
+  * [c6i.8xlarge](./content/c6i.8xlarge-affinity-interrupts.txt)
+  * [c6i.16xlarge](./content/c6i.16xlarge-affinity-interrupts.txt)
   * [c6i.24xlarge](./content/c6i.24xlarge-affinity-interrupts.txt)
 
 Once the prerequisites have been satisfied, login to your account in the AWS console and proceed with the deployment using the default values where present.
