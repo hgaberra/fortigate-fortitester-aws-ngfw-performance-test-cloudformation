@@ -1,0 +1,254 @@
+config system affinity-interrupt
+    edit 1
+        set interrupt "port1-Tx-Rx-0"
+        set affinity-cpumask "0x200"
+    next
+    edit 2
+        set interrupt "port1-Tx-Rx-1"
+        set affinity-cpumask "0x400"
+    next
+    edit 3
+        set interrupt "port1-Tx-Rx-2"
+        set affinity-cpumask "0x800"
+    next
+    edit 4
+        set interrupt "port1-Tx-Rx-3"
+        set affinity-cpumask "0x1000"
+    next
+    edit 5
+        set interrupt "port1-Tx-Rx-4"
+        set affinity-cpumask "0x2000"
+    next
+    edit 6
+        set interrupt "port1-Tx-Rx-5"
+        set affinity-cpumask "0x4000"
+    next
+    edit 7
+        set interrupt "port1-Tx-Rx-6"
+        set affinity-cpumask "0x8000"
+    next
+    edit 8
+        set interrupt "port1-Tx-Rx-7"
+        set affinity-cpumask "0x10000"
+    next
+    edit 9
+        set interrupt "port1-Tx-Rx-8"
+        set affinity-cpumask "0x20000"
+    next
+    edit 10
+        set interrupt "port1-Tx-Rx-9"
+        set affinity-cpumask "0x40000"
+    next
+    edit 11
+        set interrupt "port1-Tx-Rx-10"
+        set affinity-cpumask "0x80000"
+    next
+    edit 12
+        set interrupt "port1-Tx-Rx-11"
+        set affinity-cpumask "0x100000"
+    next
+    edit 13
+        set interrupt "port1-Tx-Rx-12"
+        set affinity-cpumask "0x200000"
+    next
+    edit 14
+        set interrupt "port1-Tx-Rx-13"
+        set affinity-cpumask "0x400000"
+    next
+    edit 15
+        set interrupt "port1-Tx-Rx-14"
+        set affinity-cpumask "0x800000"
+    next
+    edit 16
+        set interrupt "port1-Tx-Rx-15"
+        set affinity-cpumask "0x1000000"
+    next
+    edit 17
+        set interrupt "port1-Tx-Rx-16"
+        set affinity-cpumask "0x2000000"
+    next
+    edit 18
+        set interrupt "port1-Tx-Rx-17"
+        set affinity-cpumask "0x4000000"
+    next
+    edit 19
+        set interrupt "port1-Tx-Rx-18"
+        set affinity-cpumask "0x8000000"
+    next
+    edit 20
+        set interrupt "port1-Tx-Rx-19"
+        set affinity-cpumask "0x10000000"
+    next
+    edit 21
+        set interrupt "port1-Tx-Rx-20"
+        set affinity-cpumask "0x20000000"
+    next
+    edit 22
+        set interrupt "port1-Tx-Rx-21"
+        set affinity-cpumask "0x40000000"
+    next
+    edit 23
+        set interrupt "port1-Tx-Rx-22"
+        set affinity-cpumask "0x80000000"
+    next
+    edit 24
+        set interrupt "port1-Tx-Rx-23"
+        set affinity-cpumask "0x100000000"
+    next
+    edit 25
+        set interrupt "port1-Tx-Rx-24"
+        set affinity-cpumask "0x200000000"
+    next
+    edit 26
+        set interrupt "port1-Tx-Rx-25"
+        set affinity-cpumask "0x400000000"
+    next
+    edit 27
+        set interrupt "port1-Tx-Rx-26"
+        set affinity-cpumask "0x800000000"
+    next
+    edit 28
+        set interrupt "port1-Tx-Rx-27"
+        set affinity-cpumask "0x1000000000"
+    next
+    edit 29
+        set interrupt "port1-Tx-Rx-28"
+        set affinity-cpumask "0x2000000000"
+    next
+    edit 30
+        set interrupt "port1-Tx-Rx-29"
+        set affinity-cpumask "0x4000000000"
+    next
+    edit 31
+        set interrupt "port1-Tx-Rx-30"
+        set affinity-cpumask "0x8000000000"
+    next
+    edit 32
+        set interrupt "port1-Tx-Rx-31"
+        set affinity-cpumask "0x10000000000"
+    next
+    edit 33
+        set interrupt "port2-Tx-Rx-0"
+        set affinity-cpumask "0x20000000000"
+    next
+    edit 34
+        set interrupt "port2-Tx-Rx-1"
+        set affinity-cpumask "0x40000000000"
+    next
+    edit 35
+        set interrupt "port2-Tx-Rx-2"
+        set affinity-cpumask "0x80000000000"
+    next
+    edit 36
+        set interrupt "port2-Tx-Rx-3"
+        set affinity-cpumask "0x100000000000"
+    next
+    edit 37
+        set interrupt "port2-Tx-Rx-4"
+        set affinity-cpumask "0x200000000000"
+    next
+    edit 38
+        set interrupt "port2-Tx-Rx-5"
+        set affinity-cpumask "0x400000000000"
+    next
+    edit 39
+        set interrupt "port2-Tx-Rx-6"
+        set affinity-cpumask "0x800000000000"
+    next
+    edit 40
+        set interrupt "port2-Tx-Rx-7"
+        set affinity-cpumask "0x1000000000000"
+    next
+    edit 41
+        set interrupt "port2-Tx-Rx-8"
+        set affinity-cpumask "0x2000000000000"
+    next
+    edit 42
+        set interrupt "port2-Tx-Rx-9"
+        set affinity-cpumask "0x4000000000000"
+    next
+    edit 43
+        set interrupt "port2-Tx-Rx-10"
+        set affinity-cpumask "0x8000000000000"
+    next
+    edit 44
+        set interrupt "port2-Tx-Rx-11"
+        set affinity-cpumask "0x10000000000000"
+    next
+    edit 45
+        set interrupt "port2-Tx-Rx-12"
+        set affinity-cpumask "0x20000000000000"
+    next
+    edit 46
+        set interrupt "port2-Tx-Rx-13"
+        set affinity-cpumask "0x40000000000000"
+    next
+    edit 47
+        set interrupt "port2-Tx-Rx-14"
+        set affinity-cpumask "0x80000000000000"
+    next
+    edit 48
+        set interrupt "port2-Tx-Rx-15"
+        set affinity-cpumask "0x100000000000000"
+    next
+    edit 49
+        set interrupt "port2-Tx-Rx-16"
+        set affinity-cpumask "0x200000000000000"
+    next
+    edit 50
+        set interrupt "port2-Tx-Rx-17"
+        set affinity-cpumask "0x400000000000000"
+    next
+    edit 51
+        set interrupt "port2-Tx-Rx-18"
+        set affinity-cpumask "0x800000000000000"
+    next
+    edit 52
+        set interrupt "port2-Tx-Rx-19"
+        set affinity-cpumask "0x1000000000000000"
+    next
+    edit 53
+        set interrupt "port2-Tx-Rx-20"
+        set affinity-cpumask "0x2000000000000000"
+    next
+    edit 54
+        set interrupt "port2-Tx-Rx-21"
+        set affinity-cpumask "0x4000000000000000"
+    next
+    edit 55
+        set interrupt "port2-Tx-Rx-22"
+        set affinity-cpumask "0x8000000000000000"
+    next
+    edit 56
+        set interrupt "port2-Tx-Rx-23"
+        set affinity-cpumask "0x10000000000000000"
+    next
+    edit 57
+        set interrupt "port2-Tx-Rx-24"
+        set affinity-cpumask "0x20000000000000000"
+    next
+    edit 58
+        set interrupt "port2-Tx-Rx-25"
+        set affinity-cpumask "0x40000000000000000"
+    next
+    edit 59
+        set interrupt "port2-Tx-Rx-26"
+        set affinity-cpumask "0x80000000000000000"
+    next
+    edit 60
+        set interrupt "port2-Tx-Rx-27"
+        set affinity-cpumask "0x100000000000000000"
+    next
+    edit 61
+        set interrupt "port2-Tx-Rx-28"
+        set affinity-cpumask "0x200000000000000000"
+    next
+    edit 62
+        set interrupt "port2-Tx-Rx-29"
+        set affinity-cpumask "0x400000000000000000"
+    next
+    edit 64
+        set interrupt "port2-Tx-Rx-31"
+        set affinity-cpumask "0x800000000000000000"
+    next
+end

@@ -1,0 +1,2543 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "(v9.1) AWS CFT to launch a performance testing VPC with FortiGates, FortiTester, and AL2 Nginx Web Servers",
+	"Metadata": {
+		"AWS::CloudFormation::Interface": {
+			"ParameterGroups": [
+				{
+					"Label": {
+						"default": "VPC Configuration"
+					},
+					"Parameters": [
+						"VpcCidr",
+						"AvailabilityZone",
+						"GatewaySubnet",
+						"DutPublicSubnet",
+						"DutPrivateSubnet",
+						"KeyPair"
+					]
+				},
+				{
+					"Label": {
+						"default": "Gateway FortiGate Instance Configuration"
+					},
+					"Parameters": [
+						"GwFgtInstanceType",
+						"CidrForGwFgtAccess",
+						"SslVpnUserPassword",
+						"GwFgtPrimaryIP",
+						"GwFgtSecondaryIP",
+						"GwFgtTertiaryIP"
+					]
+				},
+				{
+					"Label": {
+						"default": "Device Under Test FortiGate Instance Configuration"
+					},
+					"Parameters": [
+						"DutFgtRemove",
+						"DutFgtInstanceType",
+						"DutFgtMgmtIP",
+						"DutFgtSecondIP",
+						"DutFgtThirdIP",
+						"DutFgtFourthIP",
+						"DutFgtFifthIP"
+					]
+				},
+				{
+					"Label": {
+						"default": "FortiTester Instance Configuration"
+					},
+					"Parameters": [
+						"FtsInstanceType",
+						"FtsMgmtIP",
+						"FtsTrafficPort1IP1",
+						"FtsTrafficPort2IP1",
+						"FtsTrafficPort1IP2",
+						"FtsTrafficPort2IP2",
+						"FtsvRouterCidr1",
+						"FtsvRouterCidr2"
+					]
+				},
+				{
+					"Label": {
+						"default": "WebServer Instance Configuration"
+					},
+					"Parameters": [
+						"WebSrvInstanceType",
+						"WebSrv1IP",
+						"WebSrv2IP",
+						"WebSrv3IP",
+						"WebSrv4IP"
+					]
+				}
+			]
+		}
+	},
+	"Parameters": {
+		"VpcCidr": {
+			"Type": "String",
+			"Default": "10.0.0.0/16",
+			"Description": "Provide a network CIDR for the VPC"
+		},
+		"AvailabilityZone": {
+			"Type": "AWS::EC2::AvailabilityZone::Name",
+			"Description": "Select an Avaiability Zone for all resources"
+		},
+		"GatewaySubnet": {
+			"Type": "String",
+			"Default": "10.0.0.0/24",
+			"Description": "Provide a network CIDR for the Gateway Subnet"
+		},
+		"DutPublicSubnet": {
+			"Type": "String",
+			"Default": "10.0.1.0/24",
+			"Description": "Provide a network CIDR for the DUT Public Subnet"
+		},
+		"DutPrivateSubnet": {
+			"Type": "String",
+			"Default": "10.0.2.0/24",
+			"Description": "Provide a network CIDR for the DUT Public Subnet"
+		},
+		"KeyPair": {
+			"Type": "AWS::EC2::KeyPair::KeyName",
+			"Description": "Select a keypair to associate with all the instances"
+		},
+		"GwFgtInstanceType": {
+			"Type": "String",
+			"Default": "t2.small",
+			"Description": "Select an instance type for the Gateway FortiGate",
+			"AllowedValues": [
+				"t2.small",
+				"t3.small",
+				"t3.xlarge",
+				"c5.large",
+				"c5.xlarge"
+			]
+		},
+		"CidrForGwFgtAccess": {
+			"Type": "String",
+			"Default": "0.0.0.0/0",
+			"Description": "Provide a network CIDR from which the Gateway FortiGate and configured VIPs will be accessed"
+		},
+		"SslVpnUserPassword": {
+			"Type": "String",
+			"NoEcho": "true",
+			"Description": "Provide a password for the 'guest' user account for SSL VPN access"
+		},
+		"GwFgtPrimaryIP": {
+			"Type": "String",
+			"Default": "10.0.0.250",
+			"Description": "Provide a primary IP address for public access to the Gw FortiGate (IP from GatewaySubnet)"
+		},
+		"GwFgtSecondaryIP": {
+			"Type": "String",
+			"Default": "10.0.0.251",
+			"Description": "Provide a secondary IP address for a VIP object for the FortiTester (IP from GatewaySubnet)"
+		},
+		"GwFgtTertiaryIP": {
+			"Type": "String",
+			"Default": "10.0.0.252",
+			"Description": "Provide a third IP address for a VIP object for the DUT FortiGate (IP from GatewaySubnet)"
+		},
+		"DutFgtRemove": {
+			"Type": "String",
+			"Default": "false",
+			"Description": "Select true to remove a previously deployed DUT FortiGate, otherwise use false",
+			"AllowedValues": [
+				"false",
+				"true"
+			]
+		},
+		"DutFgtInstanceType": {
+			"Type": "String",
+			"Default": "c5n.large",
+			"Description": "Select an instance type for the DUT FortiGate",
+			"AllowedValues": [
+				"t2.small",
+				"t3.small",
+				"t3.xlarge",
+				"c5n.large",
+				"c5n.xlarge",
+				"c5n.2xlarge",
+				"c5n.4xlarge",
+				"c5n.9xlarge",
+				"c5n.18xlarge",
+				"c5.large",
+				"c5.xlarge",
+				"c5.2xlarge",
+				"c5.4xlarge",
+				"c5.9xlarge",
+				"c5n.18xlarge",
+				"c6i.large",
+				"c6i.xlarge",
+				"c6i.2xlarge",
+				"c6i.4xlarge",
+				"c6i.8xlarge",
+				"c6i.16xlarge",
+				"c6i.24xlarge"
+			]
+		},
+		"DutFgtMgmtIP": {
+			"Type": "String",
+			"Default": "10.0.1.250",
+			"Description": "Provide a primary IP for mgmt access to the DUT FortiGate (IP from DutPublicSubnet)"
+		},
+		"DutFgtSecondIP": {
+			"Type": "String",
+			"Default": "10.0.1.251",
+			"Description": "Provide a second IP address for a VIP object for WebServer1 (IP from DutPublicSubnet)"
+		},
+		"DutFgtThirdIP": {
+			"Type": "String",
+			"Default": "10.0.1.252",
+			"Description": "Provide a third IP address for a VIP object for WebServer2 (IP from DutPublicSubnet)"
+		},
+		"DutFgtFourthIP": {
+			"Type": "String",
+			"Default": "10.0.1.253",
+			"Description": "Provide a fourth IP address for a VIP object for WebServer3 (IP from DutPublicSubnet)"
+		},
+		"DutFgtFifthIP": {
+			"Type": "String",
+			"Default": "10.0.1.254",
+			"Description": "Provide a fifth IP address for a VIP object for WebServer4 (IP from DutPublicSubnet)"
+		},
+		"FtsInstanceType": {
+			"Type": "String",
+			"Default": "c5n.4xlarge",
+			"Description": "Select the instance type for the FortiTester",
+			"AllowedValues": [
+				"c5n.xlarge",
+				"c5n.2xlarge",
+				"c5n.4xlarge",
+				"c5n.9xlarge",
+				"c5.xlarge",
+				"c5.2xlarge",
+				"c5.4xlarge",
+				"c5.9xlarge"
+			]
+		},
+		"FtsMgmtIP": {
+			"Type": "String",
+			"Default": "10.0.1.240",
+			"Description": "Provide an IP for the mgmt port of FortiTester (IP from DutPublicSubnet)"
+		},
+		"FtsTrafficPort1IP1": {
+			"Type": "String",
+			"Default": "10.0.1.241",
+			"Description": "Provide an IP address for the traffic port1 of FortiTester (IP from DutPublicSubnet)"
+		},
+		"FtsTrafficPort2IP1": {
+			"Type": "String",
+			"Default": "10.0.1.242",
+			"Description": "Provide an IP address for the traffic port2 of FortiTester (IP from DutPublicSubnet)"
+		},
+		"FtsTrafficPort1IP2": {
+			"Type": "String",
+			"Default": "10.0.1.243",
+			"Description": "Provide a second IP address for the traffic port1 of FortiTester (IP from DutPublicSubnet)"
+		},
+		"FtsTrafficPort2IP2": {
+			"Type": "String",
+			"Default": "10.0.1.244",
+			"Description": "Provide a second IP address for the traffic port2 of FortiTester (IP from DutPublicSubnet)"
+		},
+		"FtsvRouterCidr1": {
+			"Type": "String",
+			"Default": "10.1.0.0/16",
+			"Description": "Provide a CIDR value for the client vRouter subnet for FortiTester traffic port1 (IP CIDR outside of the Vpc Cidr)"
+		},
+		"FtsvRouterCidr2": {
+			"Type": "String",
+			"Default": "10.2.0.0/16",
+			"Description": "Provide a CIDR value for the client vRouter subnet for FortiTester traffic port2 (IP CIDR outside of the Vpc Cidr)"
+		},
+		"WebSrvInstanceType": {
+			"Type": "String",
+			"Default": "c5n.2xlarge",
+			"Description": "Select an instance type for the WebServers",
+			"AllowedValues": [
+				"c5n.large",
+				"c5n.xlarge",
+				"c5n.2xlarge",
+				"c5n.4xlarge",
+				"c5n.9xlarge",
+				"c5.large",
+				"c5.xlarge",
+				"c5.2xlarge",
+				"c5.4xlarge",
+				"c5.9xlarge"
+			]
+		},
+		"WebSrv1IP": {
+			"Type": "String",
+			"Default": "10.0.2.100",
+			"Description": "Provide an IP for WebServer1 (IP from DutPrivateSubnet)"
+		},
+		"WebSrv2IP": {
+			"Type": "String",
+			"Default": "10.0.2.125",
+			"Description": "Provide an IP for WebServer2 (IP from DutPrivateSubnet)"
+		},
+		"WebSrv3IP": {
+			"Type": "String",
+			"Default": "10.0.2.150",
+			"Description": "Provide an IP for WebServer3 (IP from DutPrivateSubnet)"
+		},
+		"WebSrv4IP": {
+			"Type": "String",
+			"Default": "10.0.2.200",
+			"Description": "Provide an IP for WebServer4 (IP from DutPrivateSubnet)"
+		}
+	},
+	"Conditions": {
+		"RemoveThis": {
+			"Fn::Not": [
+				{
+					"Fn::Equals": [
+						{
+							"Ref": "DutFgtRemove"
+						},
+						"true"
+					]
+				}
+			]
+		}
+	},
+	"Resources": {
+		"VpcID": {
+			"Type": "AWS::EC2::VPC",
+			"Properties": {
+				"CidrBlock": {
+					"Ref": "VpcCidr"
+				},
+				"EnableDnsSupport": "true",
+				"EnableDnsHostnames": "true",
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-vpc"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"GwSubnet": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"CidrBlock": {
+					"Ref": "GatewaySubnet"
+				},
+				"AvailabilityZone": {
+					"Ref": "AvailabilityZone"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-GatewaySubnet"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"DutPubSubnet": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"CidrBlock": {
+					"Ref": "DutPublicSubnet"
+				},
+				"AvailabilityZone": {
+					"Ref": "AvailabilityZone"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-DutPublicSubnet"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"DutPrivSubnet": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"CidrBlock": {
+					"Ref": "DutPrivateSubnet"
+				},
+				"AvailabilityZone": {
+					"Ref": "AvailabilityZone"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-DutPrivateSubnet"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"GatewayRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-GatewayRouteTable"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"DutPublicRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-DutPublicRouteTable"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"DutPrivateRouteTable": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-DutPrivateRouteTable"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"InternetGateway": {
+			"Type": "AWS::EC2::InternetGateway",
+			"Properties": {
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-igw"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"AttachGateway": {
+			"Type": "AWS::EC2::VPCGatewayAttachment",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"InternetGatewayId": {
+					"Ref": "InternetGateway"
+				}
+			}
+		},
+		"RouteIgw": {
+			"Type": "AWS::EC2::Route",
+			"DependsOn": "AttachGateway",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "GatewayRouteTable"
+				},
+				"DestinationCidrBlock": "0.0.0.0/0",
+				"GatewayId": {
+					"Ref": "InternetGateway"
+				}
+			}
+		},
+		"RouteGwFgt": {
+			"Type": "AWS::EC2::Route",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "DutPublicRouteTable"
+				},
+				"DestinationCidrBlock": "0.0.0.0/0",
+				"NetworkInterfaceId": {
+					"Ref": "GwFgtEni0"
+				}
+			}
+		},
+		"RouteDuTFgt1": {
+			"Type": "AWS::EC2::Route",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "DutPrivateRouteTable"
+				},
+				"DestinationCidrBlock": "0.0.0.0/0",
+				"NetworkInterfaceId": {
+					"Ref": "DutFgtEni1"
+				}
+			}
+		},
+		"RouteDuTFgt2": {
+			"Type": "AWS::EC2::Route",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "DutPrivateRouteTable"
+				},
+				"DestinationCidrBlock": {
+					"Ref": "DutPublicSubnet"
+				},
+				"NetworkInterfaceId": {
+					"Ref": "DutFgtEni1"
+				}
+			}
+		},
+		"RouteDuTFgt3": {
+			"Type": "AWS::EC2::Route",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "DutPrivateRouteTable"
+				},
+				"DestinationCidrBlock": {
+					"Ref": "GatewaySubnet"
+				},
+				"NetworkInterfaceId": {
+					"Ref": "DutFgtEni1"
+				}
+			}
+		},
+		"RouteDuTFgt4": {
+			"Type": "AWS::EC2::Route",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "DutPublicRouteTable"
+				},
+				"DestinationCidrBlock": {
+					"Ref": "DutPrivateSubnet"
+				},
+				"NetworkInterfaceId": {
+					"Ref": "DutFgtEni0"
+				}
+			}
+		},
+		"SubnetRouteTableAssociation1": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "GwSubnet"
+				},
+				"RouteTableId": {
+					"Ref": "GatewayRouteTable"
+				}
+			}
+		},
+		"SubnetRouteTableAssociation2": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "DutPubSubnet"
+				},
+				"RouteTableId": {
+					"Ref": "DutPublicRouteTable"
+				}
+			}
+		},
+		"SubnetRouteTableAssociation3": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"SubnetId": {
+					"Ref": "DutPrivSubnet"
+				},
+				"RouteTableId": {
+					"Ref": "DutPrivateRouteTable"
+				}
+			}
+		},
+		"S3Endpoint": {
+			"Type": "AWS::EC2::VPCEndpoint",
+			"Properties": {
+				"PolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": "*",
+							"Action": [
+								"s3:*"
+							],
+							"Resource": [
+								"*"
+							]
+						}
+					]
+				},
+				"RouteTableIds": [
+					{
+						"Ref": "DutPrivateRouteTable"
+					}
+				],
+				"ServiceName": {
+					"Fn::Join": [
+						"",
+						[
+							"com.amazonaws.",
+							{
+								"Ref": "AWS::Region"
+							},
+							".s3"
+						]
+					]
+				},
+				"VpcId": {
+					"Ref": "VpcID"
+				}
+			}
+		},
+		"DutAllowAllSecGrp": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"GroupDescription": "DutAllowAllSecGrp",
+				"SecurityGroupIngress": [
+					{
+						"Description": "Allow all, bypass AWS secgrp connection tracking",
+						"IpProtocol": "-1",
+						"FromPort": "0",
+						"ToPort": "65535",
+						"CidrIp": "0.0.0.0/0"
+					}
+				],
+				"SecurityGroupEgress": [
+					{
+						"IpProtocol": "-1",
+						"CidrIp": "0.0.0.0/0"
+					}
+				]
+			}
+		},
+		"GwFgt": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {
+					"Fn::GetAtt": [
+						"RunImageFunction2",
+						"ami"
+					]
+				},
+				"InstanceType": {
+					"Ref": "GwFgtInstanceType"
+				},
+				"KeyName": {
+					"Ref": "KeyPair"
+				},
+				"SourceDestCheck": "false",
+				"NetworkInterfaces": [
+					{
+						"NetworkInterfaceId": {
+							"Ref": "GwFgtEni0"
+						},
+						"DeviceIndex": "0"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-GwFgt"
+								]
+							]
+						}
+					}
+				],
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": [
+							"\n",
+							[
+								"config system global",
+								"set hostname GwFgt",
+								"set admintimeout 60",
+								"end",
+								"config system interface",
+								"edit port1",
+								"set allowaccess https ssh ping",
+								"next",
+								"end",
+								"config firewall vip",
+								"edit vip_dut-fgt",
+								"set extintf port1",
+								{
+									"Fn::Sub": "set extip ${GwFgtSecondaryIP}"
+								},
+								{
+									"Fn::Sub": "set mappedip ${FtsMgmtIP}"
+								},
+								"next",
+								"edit vip_dut-fts",
+								"set extintf port1",
+								{
+									"Fn::Sub": "set extip ${GwFgtTertiaryIP}"
+								},
+								{
+									"Fn::Sub": "set mappedip ${DutFgtMgmtIP}"
+								},
+								"next",
+								"end",
+								"config firewall address",
+								"edit perfvpc-cidr",
+								{
+									"Fn::Sub": "set subnet ${VpcCidr}"
+								},
+								"next",
+								"end",
+								"config vpn ssl web portal",
+								"edit perfvpc-sslportal",
+								"set tunnel-mode enable",
+								"set web-mode enable",
+								"set auto-connect enable",
+								"set keep-alive enable",
+								"set save-password enable",
+								"set ip-pools SSLVPN_TUNNEL_ADDR1",
+								"set split-tunneling-routing-address perfvpc-cidr",
+								"next",
+								"end",
+								"config vpn ssl settings",
+								"set servercert self-sign",
+								"set idle-timeout 3600",
+								"set tunnel-ip-pools SSLVPN_TUNNEL_ADDR1",
+								"set port 10443",
+								"set source-interface port1",
+								"set source-address all",
+								"set source-address6 all",
+								"set default-portal perfvpc-sslportal",
+								"end",
+								"config user local",
+								"edit guest",
+								{
+									"Fn::Sub": "set passwd ${SslVpnUserPassword}"
+								},
+								"next",
+								"end",
+								"config firewall policy",
+								"edit 1",
+								"set srcintf port1",
+								"set dstintf port1",
+								"set srcaddr all",
+								"set dstaddr vip_dut-fgt vip_dut-fts",
+								"set action accept",
+								"set schedule always",
+								"set service ALL",
+								"set logtraffic all",
+								"set nat enable",
+								"next",
+								"edit 2",
+								"set srcintf port1",
+								"set dstintf port1",
+								"set srcaddr all",
+								"set dstaddr all",
+								"set action accept",
+								"set schedule always",
+								"set service ALL",
+								"set logtraffic all",
+								"set nat enable",
+								"next",
+								"edit 3",
+								"set srcintf ssl.root",
+								"set dstintf port1",
+								"set srcaddr all",
+								"set dstaddr perfvpc-cidr",
+								"set action accept",
+								"set schedule always",
+								"set service ALL",
+								"set logtraffic all",
+								"set groups Guest-group",
+								"set nat enable",
+								"next",
+								"end"
+							]
+						]
+					}
+				}
+			}
+		},
+		"GwFgtSecGrp": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupDescription": "GwFgtSecGrp",
+				"VpcId": {
+					"Ref": "VpcID"
+				},
+				"SecurityGroupIngress": [
+					{
+						"Description": "Allow remote access to FGT",
+						"IpProtocol": "-1",
+						"CidrIp": {
+							"Ref": "CidrForGwFgtAccess"
+						}
+					},
+					{
+						"Description": "Allow local VPC access to FGT",
+						"IpProtocol": "-1",
+						"CidrIp": {
+							"Ref": "VpcCidr"
+						}
+					}
+				],
+				"SecurityGroupEgress": [
+					{
+						"IpProtocol": "-1",
+						"CidrIp": "0.0.0.0/0"
+					}
+				]
+			}
+		},
+		"GwFgtEni0": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port1",
+				"GroupSet": [
+					{
+						"Ref": "GwFgtSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "GwSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-GwFgtEni0"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth0"
+					}
+				],
+				"PrivateIpAddresses": [
+					{
+						"PrivateIpAddress": {
+							"Ref": "GwFgtPrimaryIP"
+						},
+						"Primary": "true"
+					},
+					{
+						"PrivateIpAddress": {
+							"Ref": "GwFgtSecondaryIP"
+						},
+						"Primary": "false"
+					},
+					{
+						"PrivateIpAddress": {
+							"Ref": "GwFgtTertiaryIP"
+						},
+						"Primary": "false"
+					}
+				]
+			}
+		},
+		"DutFgt": {
+			"Type": "AWS::EC2::Instance",
+			"Condition": "RemoveThis",
+			"Properties": {
+				"ImageId": {
+					"Fn::GetAtt": [
+						"RunImageFunction1",
+						"ami"
+					]
+				},
+				"InstanceType": {
+					"Ref": "DutFgtInstanceType"
+				},
+				"KeyName": {
+					"Ref": "KeyPair"
+				},
+				"NetworkInterfaces": [
+					{
+						"NetworkInterfaceId": {
+							"Ref": "DutFgtEni0"
+						},
+						"DeviceIndex": "0"
+					},
+					{
+						"NetworkInterfaceId": {
+							"Ref": "DutFgtEni1"
+						},
+						"DeviceIndex": "1"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-DutFgt"
+								]
+							]
+						}
+					}
+				],
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": [
+							"\n",
+							[
+								"config system global",
+								"set hostname DutFgt",
+								"set admintimeout 60",
+								"end",
+								"config system snmp sysinfo",
+								"set status enable",
+								"set description fgt",
+								"end",
+								"config system snmp community",
+								"edit 1",
+								"set name performance",
+								"config hosts",
+								"edit 1",
+								{
+									"Fn::Sub": "set ip ${FtsMgmtIP} 255.255.255.255"
+								},
+								"set host-type query",
+								"next",
+								"end",
+								"set query-v1-status disable",
+								"set trap-v1-status disable",
+								"set trap-v2c-status disable",
+								"next",
+								"end",
+								"config system admin",
+								"edit admin",
+								"config gui-dashboard",
+								"edit 10",
+								"set name Performance",
+								"set vdom root",
+								"set layout-type fixed",
+								"config widget",
+								"edit 1",
+								"set type cpu-usage",
+								"set x-pos 5",
+								"set width 5",
+								"set height 3",
+								"next",
+								"edit 2",
+								"set type memory-usage",
+								"set x-pos 5",
+								"set y-pos 3",
+								"set width 5",
+								"set height 3",
+								"next",
+								"edit 3",
+								"set type session-rate",
+								"set y-pos 3",
+								"set width 5",
+								"set height 3",
+								"next",
+								"edit 4",
+								"set type sessions",
+								"set y-pos 6",
+								"set width 5",
+								"set height 3",
+								"next",
+								"edit 5",
+								"set type log-rate",
+								"set x-pos 5",
+								"set y-pos 6",
+								"set width 5",
+								"set height 3",
+								"next",
+								"edit 6",
+								"set type vminfo",
+								"set x-pos 3",
+								"set width 2",
+								"set height 3",
+								"next",
+								"edit 7",
+								"set type tr-history",
+								"set y-pos 9",
+								"set width 5",
+								"set height 3",
+								"set interface port1",
+								"next",
+								"edit 8",
+								"set type tr-history",
+								"set x-pos 5",
+								"set y-pos 9",
+								"set width 5",
+								"set height 3",
+								"set interface port2",
+								"next",
+								"edit 8",
+								"set type tr-history",
+								"set x-pos 5",
+								"set y-pos 9",
+								"set width 5",
+								"set height 3",
+								"set interface port2",
+								"next",
+								"edit 9",
+								"set width 3",
+								"set height 3",
+								"next",
+								"end",
+								"next",
+								"end",
+								"next",
+								"end",
+								"config log memory setting",
+								"set status disable",
+								"end",
+								"config log disk setting",
+								"set status enable",
+								"end",
+								"config system interface",
+								"edit port1",
+								"set allowaccess ping https ssh snmp",
+								"next",
+								"edit port2",
+								"set mode dhcp",
+								"set allowaccess ping",
+								"set defaultgw disable",
+								"set dns-server-override disable",
+								"next",
+								"end",
+								"config firewall vip",
+								"edit vip_websrv1",
+								{
+									"Fn::Sub": "set extip ${DutFgtSecondIP}"
+								},
+								"set extintf port1",
+								{
+									"Fn::Sub": "set mappedip ${WebSrv1IP}"
+								},
+								"next",
+								"edit vip_websrv2",
+								{
+									"Fn::Sub": "set extip ${DutFgtThirdIP}"
+								},
+								"set extintf port1",
+								{
+									"Fn::Sub": "set mappedip ${WebSrv2IP}"
+								},
+								"next",
+								"edit vip_websrv3",
+								{
+									"Fn::Sub": "set extip ${DutFgtFourthIP}"
+								},
+								"set extintf port1",
+								{
+									"Fn::Sub": "set mappedip ${WebSrv3IP}"
+								},
+								"next",
+								"edit vip_websrv4",
+								{
+									"Fn::Sub": "set extip ${DutFgtFifthIP}"
+								},
+								"set extintf port1",
+								{
+									"Fn::Sub": "set mappedip ${WebSrv4IP}"
+								},
+								"next",
+								"end",
+								"config antivirus profile",
+								"clone default to default_proxy",
+								"edit default_proxy",
+								"set feature-set proxy ",
+								"next",
+								"end",
+								"config firewall ssl-ssh-profile",
+								"clone deep-inspection to deep-inspection_protect-server",
+								"edit deep-inspection_protect-server",
+								"set server-cert-mode replace",
+								"set server-cert Fortinet_SSL",
+								"set ssl-exemption-log enable",
+								"next",
+								"end",
+								"config firewall policy",
+								"edit 1",
+								"set name fw",
+								"set srcintf port1",
+								"set dstintf port2",
+								"set srcaddr all",
+								"set dstaddr vip_websrv1 vip_websrv2 vip_websrv3 vip_websrv4",
+								"set action accept",
+								"set schedule always",
+								"set service HTTPS HTTP PING",
+								"set logtraffic all",
+								"next",
+								"edit 2",
+								"set name fw+ips",
+								"set srcintf port1",
+								"set dstintf port2",
+								"set srcaddr all",
+								"set dstaddr vip_websrv1 vip_websrv2 vip_websrv3 vip_websrv4",
+								"set action accept",
+								"set schedule always",
+								"set service HTTPS HTTP PING",
+								"set utm-status enable",
+								"set logtraffic all",
+								"set ips-sensor all_default_pass",
+								"set ssl-ssh-profile certificate-inspection",
+								"next",
+								"edit 3",
+								"set name fw+ips+apc",
+								"set srcintf port1",
+								"set dstintf port2",
+								"set srcaddr all",
+								"set dstaddr vip_websrv1 vip_websrv2 vip_websrv3 vip_websrv4",
+								"set action accept",
+								"set schedule always",
+								"set service HTTPS HTTP PING",
+								"set utm-status enable",
+								"set logtraffic all",
+								"set ips-sensor all_default_pass",
+								"set application-list default",
+								"set ssl-ssh-profile certificate-inspection",
+								"next",
+								"edit 4",
+								"set name fw+ips+apc+fav",
+								"set srcintf port1",
+								"set dstintf port2",
+								"set srcaddr all",
+								"set dstaddr vip_websrv1 vip_websrv2 vip_websrv3 vip_websrv4",
+								"set action accept",
+								"set schedule always",
+								"set service HTTPS HTTP PING",
+								"set utm-status enable",
+								"set logtraffic all",
+								"set av-profile default",
+								"set ips-sensor all_default_pass",
+								"set application-list default",
+								"set ssl-ssh-profile certificate-inspection",
+								"next",
+								"edit 5",
+								"set name fw+ssl-mitm+ips+apc+pav",
+								"set srcintf port1",
+								"set dstintf port2",
+								"set srcaddr all",
+								"set dstaddr vip_websrv1 vip_websrv2 vip_websrv3 vip_websrv4",
+								"set action accept",
+								"set schedule always",
+								"set service HTTPS HTTP PING",
+								"set utm-status enable",
+								"set inspection-mode proxy",
+								"set ssl-ssh-profile deep-inspection_protect-server",
+								"set logtraffic all",
+								"set av-profile default_proxy",
+								"set ips-sensor all_default_pass",
+								"set application-list default",
+								"next",
+								"edit 101",
+								"set name inbound-ssh-webservers",
+								"set srcintf port1",
+								"set dstintf port2",
+								"set srcaddr all",
+								"set dstaddr vip_websrv1 vip_websrv2 vip_websrv3 vip_websrv4",
+								"set action accept",
+								"set schedule always",
+								"set service SSH",
+								"set logtraffic disable",
+								"set nat enable",
+								"next",
+								"edit 102",
+								"set name outbound-all-webservers",
+								"set srcintf port2",
+								"set dstintf port1",
+								"set srcaddr all",
+								"set dstaddr all",
+								"set action accept",
+								"set schedule always",
+								"set service ALL",
+								"set logtraffic disable",
+								"set nat enable",
+								"next",
+								"end"
+							]
+						]
+					}
+				}
+			}
+		},
+		"DutFgtEni0": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port1",
+				"GroupSet": [
+					{
+						"Ref": "DutAllowAllSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "DutPubSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-DutFgtEni0"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth0"
+					}
+				],
+				"PrivateIpAddresses": [
+					{
+						"PrivateIpAddress": {
+							"Ref": "DutFgtMgmtIP"
+						},
+						"Primary": "true"
+					},
+					{
+						"PrivateIpAddress": {
+							"Ref": "DutFgtSecondIP"
+						},
+						"Primary": "false"
+					},
+					{
+						"PrivateIpAddress": {
+							"Ref": "DutFgtThirdIP"
+						},
+						"Primary": "false"
+					},
+					{
+						"PrivateIpAddress": {
+							"Ref": "DutFgtFourthIP"
+						},
+						"Primary": "false"
+					},
+					{
+						"PrivateIpAddress": {
+							"Ref": "DutFgtFifthIP"
+						},
+						"Primary": "false"
+					}
+				]
+			}
+		},
+		"DutFgtEni1": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port2",
+				"GroupSet": [
+					{
+						"Ref": "DutAllowAllSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "DutPrivSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-DutFgtEni1"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth1"
+					}
+				]
+			}
+		},
+		"FgtPrimaryEip": {
+			"Type": "AWS::EC2::EIP",
+			"Properties": {
+				"Domain": "VpcID"
+			}
+		},
+		"FgtPrimaryEipAssociation": {
+			"Type": "AWS::EC2::EIPAssociation",
+			"Properties": {
+				"AllocationId": {
+					"Fn::GetAtt": [
+						"FgtPrimaryEip",
+						"AllocationId"
+					]
+				},
+				"NetworkInterfaceId": {
+					"Ref": "GwFgtEni0"
+				},
+				"PrivateIpAddress": {
+					"Ref": "GwFgtPrimaryIP"
+				}
+			}
+		},
+		"FgtSecondaryEip": {
+			"Type": "AWS::EC2::EIP",
+			"Properties": {
+				"Domain": "VpcID"
+			}
+		},
+		"FgtSecondaryEipAssociation": {
+			"Type": "AWS::EC2::EIPAssociation",
+			"Properties": {
+				"AllocationId": {
+					"Fn::GetAtt": [
+						"FgtSecondaryEip",
+						"AllocationId"
+					]
+				},
+				"NetworkInterfaceId": {
+					"Ref": "GwFgtEni0"
+				},
+				"PrivateIpAddress": {
+					"Ref": "GwFgtSecondaryIP"
+				}
+			}
+		},
+		"FgtTertiaryEip": {
+			"Type": "AWS::EC2::EIP",
+			"Properties": {
+				"Domain": "VpcID"
+			}
+		},
+		"FgtTertiaryEipAssociation": {
+			"Type": "AWS::EC2::EIPAssociation",
+			"Properties": {
+				"AllocationId": {
+					"Fn::GetAtt": [
+						"FgtTertiaryEip",
+						"AllocationId"
+					]
+				},
+				"NetworkInterfaceId": {
+					"Ref": "GwFgtEni0"
+				},
+				"PrivateIpAddress": {
+					"Ref": "GwFgtTertiaryIP"
+				}
+			}
+		},
+		"Fts": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": {
+					"Fn::GetAtt": [
+						"RunImageFunction4",
+						"ami"
+					]
+				},
+				"InstanceType": {
+					"Ref": "FtsInstanceType"
+				},
+				"KeyName": {
+					"Ref": "KeyPair"
+				},
+				"NetworkInterfaces": [
+					{
+						"NetworkInterfaceId": {
+							"Ref": "FtsEni0"
+						},
+						"DeviceIndex": "0"
+					},
+					{
+						"NetworkInterfaceId": {
+							"Ref": "FtsEni1"
+						},
+						"DeviceIndex": "1"
+					},
+					{
+						"NetworkInterfaceId": {
+							"Ref": "FtsEni2"
+						},
+						"DeviceIndex": "2"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-Fts"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"FtsEni0": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "management",
+				"GroupSet": [
+					{
+						"Ref": "DutAllowAllSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "DutPubSubnet"
+				},
+				"PrivateIpAddresses": [
+					{
+						"PrivateIpAddress": {
+							"Ref": "FtsMgmtIP"
+						},
+						"Primary": "true"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-FtsEni0"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"FtsEni1": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "traffic port1",
+				"GroupSet": [
+					{
+						"Ref": "DutAllowAllSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "DutPubSubnet"
+				},
+				"PrivateIpAddresses": [
+					{
+						"PrivateIpAddress": {
+							"Ref": "FtsTrafficPort1IP1"
+						},
+						"Primary": "true"
+					},
+					{
+						"PrivateIpAddress": {
+							"Ref": "FtsTrafficPort1IP2"
+						},
+						"Primary": "false"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-FtsEni1"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"FtsEni2": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "traffic port 2",
+				"GroupSet": [
+					{
+						"Ref": "DutAllowAllSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "DutPubSubnet"
+				},
+				"PrivateIpAddresses": [
+					{
+						"PrivateIpAddress": {
+							"Ref": "FtsTrafficPort2IP1"
+						},
+						"Primary": "true"
+					},
+					{
+						"PrivateIpAddress": {
+							"Ref": "FtsTrafficPort2IP2"
+						},
+						"Primary": "false"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"-",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-FtsEni2"
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+		"RouteFtsvRouterCidr1": {
+			"Type": "AWS::EC2::Route",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "DutPublicRouteTable"
+				},
+				"DestinationCidrBlock": {
+					"Ref": "FtsvRouterCidr1"
+				},
+				"NetworkInterfaceId": {
+					"Ref": "FtsEni1"
+				}
+			}
+		},
+		"RouteFtsvRouterCidr2": {
+			"Type": "AWS::EC2::Route",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "DutPublicRouteTable"
+				},
+				"DestinationCidrBlock": {
+					"Ref": "FtsvRouterCidr2"
+				},
+				"NetworkInterfaceId": {
+					"Ref": "FtsEni2"
+				}
+			}
+		},
+		"WebSrv1": {
+			"Type": "AWS::EC2::Instance",
+			"DependsOn": "GwFgt",
+			"Properties": {
+				"ImageId": {
+					"Fn::GetAtt": [
+						"RunImageFunction3",
+						"ami"
+					]
+				},
+				"InstanceType": {
+					"Ref": "WebSrvInstanceType"
+				},
+				"KeyName": {
+					"Ref": "KeyPair"
+				},
+				"NetworkInterfaces": [
+					{
+						"NetworkInterfaceId": {
+							"Ref": "WebSrv1Eni0"
+						},
+						"DeviceIndex": "0"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-WebSrv1"
+								]
+							]
+						}
+					}
+				],
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": [
+							"\n",
+							[
+								"#!/bin/bash",
+								"yum update -y",
+								"amazon-linux-extras install -y nginx1",
+								"systemctl enable nginx.service",
+								"echo 'net.ipv4.tcp_syncookies=0' >> /etc/sysctl.conf",
+								"echo 'net.ipv4.tcp_max_syn_backlog=65536' >> /etc/sysctl.conf",
+								"echo 'net.core.somaxconn=65536' >> /etc/sysctl.conf",
+								"echo 'net.core.netdev_max_backlog=65536' >> /etc/sysctl.conf",
+								"sysctl -p",
+								"echo 'MTU=1500' >> /etc/sysconfig/network-scripts/ifcfg-eth0",
+								"echo 'request subnet-mask, broadcast-address, time-offset, routers, domain-name, domain-search, domain-name-servers, host-name, nis-domain, nis-servers, ntp-servers;' >> /etc/dhcp/dhclient.conf",
+								"cd /usr/share/nginx/html",
+								"base64 /dev/urandom | head -c 32768 > 32KB.txt",
+								"base64 /dev/urandom | head -c 45056 > 44KB.txt",
+								"base64 /dev/urandom | head -c 65536 > 64KB.txt",
+								"base64 /dev/urandom | head -c 131072 > 128KB.txt",
+								"count=`nproc`",
+								"cd /etc/nginx/",
+								"mv nginx.conf nginx.conf.orig",
+								"openssl req -x509 -nodes -days 365 -newkey rsa:2048 -nodes -out www_example_com.csr -keyout /etc/nginx/nginx-selfsigned.key -subj '/C=US/ST=Georgia/L=Atlanta/O=Fortinet/OU=Lab/CN=www.example.com' -out /etc/nginx/nginx-selfsigned.crt",
+								"echo 'user nginx;' >> /etc/nginx/nginx.conf",
+								"echo \"worker_processes $count;\" >> /etc/nginx/nginx.conf",
+								"echo 'error_log off;' >> /etc/nginx/nginx.conf",
+								"echo 'pid /run/nginx.pid;' >> /etc/nginx/nginx.conf",
+								"echo 'include /usr/share/nginx/modules/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo 'events {worker_connections 2048;}' >> /etc/nginx/nginx.conf",
+								"echo 'http {' >> /etc/nginx/nginx.conf",
+								"echo '    access_log  off;' >> /etc/nginx/nginx.conf",
+								"echo '    sendfile            on;' >> /etc/nginx/nginx.conf",
+								"echo '    tcp_nopush          on;' >> /etc/nginx/nginx.conf",
+								"echo '    tcp_nodelay         on;' >> /etc/nginx/nginx.conf",
+								"echo '    keepalive_timeout   65;' >> /etc/nginx/nginx.conf",
+								"echo '    types_hash_max_size 4096;' >> /etc/nginx/nginx.conf",
+								"echo '    include             /etc/nginx/mime.types;' >> /etc/nginx/nginx.conf",
+								"echo '    default_type        application/octet-stream;' >> /etc/nginx/nginx.conf",
+								"echo '    include /etc/nginx/conf.d/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo '    server {' >> /etc/nginx/nginx.conf",
+								"echo '        listen       80;' >> /etc/nginx/nginx.conf",
+								"echo '        server_name  _;' >> /etc/nginx/nginx.conf",
+								"echo '        root         /usr/share/nginx/html;' >> /etc/nginx/nginx.conf",
+								"echo '        include /etc/nginx/default.d/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 404 /404.html;' >> /etc/nginx/nginx.conf",
+								"echo '        location = /404.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 500 502 503 504 /50x.html;' >> /etc/nginx/nginx.conf",
+								"echo '        location = /50x.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '    }' >> /etc/nginx/nginx.conf",
+								"echo '    server {' >> /etc/nginx/nginx.conf",
+								"echo '        listen       443 ssl http2;' >> /etc/nginx/nginx.conf",
+								"echo '        server_name  _;' >> /etc/nginx/nginx.conf",
+								"echo '        root         /usr/share/nginx/html;' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_certificate '/etc/nginx/nginx-selfsigned.crt';' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_certificate_key '/etc/nginx/nginx-selfsigned.key';' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_session_cache shared:SSL:1m;' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_session_timeout  10m;' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_protocols TLSv1.2;' >> /etc/nginx/nginx.conf",
+								"echo '#        ssl_ciphers PROFILE=SYSTEM;' >> /etc/nginx/nginx.conf",
+								"echo '#        ssl_prefer_server_ciphers on;' >> /etc/nginx/nginx.conf",
+								"echo '        include /etc/nginx/default.d/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 404 /404.html;' >> /etc/nginx/nginx.conf",
+								"echo '            location = /40x.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 500 502 503 504 /50x.html;' >> /etc/nginx/nginx.conf",
+								"echo '            location = /50x.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '    }' >> /etc/nginx/nginx.conf",
+								"echo '}' >> /etc/nginx/nginx.conf",
+								"systemctl restart nginx",
+								"reboot"
+							]
+						]
+					}
+				}
+			}
+		},
+		"WebSrv1Eni0": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port1",
+				"GroupSet": [
+					{
+						"Ref": "DutAllowAllSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "DutPrivSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-WebSrv1Eni0"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth0"
+					}
+				],
+				"PrivateIpAddresses": [
+					{
+						"PrivateIpAddress": {
+							"Ref": "WebSrv1IP"
+						},
+						"Primary": "true"
+					}
+				]
+			}
+		},
+		"WebSrv2": {
+			"Type": "AWS::EC2::Instance",
+			"DependsOn": "GwFgt",
+			"Properties": {
+				"ImageId": {
+					"Fn::GetAtt": [
+						"RunImageFunction3",
+						"ami"
+					]
+				},
+				"InstanceType": {
+					"Ref": "WebSrvInstanceType"
+				},
+				"KeyName": {
+					"Ref": "KeyPair"
+				},
+				"NetworkInterfaces": [
+					{
+						"NetworkInterfaceId": {
+							"Ref": "WebSrv2Eni0"
+						},
+						"DeviceIndex": "0"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-WebSrv2"
+								]
+							]
+						}
+					}
+				],
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": [
+							"\n",
+							[
+								"#!/bin/bash",
+								"yum update -y",
+								"amazon-linux-extras install -y nginx1",
+								"systemctl enable nginx.service",
+								"echo 'net.ipv4.tcp_syncookies=0' >> /etc/sysctl.conf",
+								"echo 'net.ipv4.tcp_max_syn_backlog=65536' >> /etc/sysctl.conf",
+								"echo 'net.core.somaxconn=65536' >> /etc/sysctl.conf",
+								"echo 'net.core.netdev_max_backlog=65536' >> /etc/sysctl.conf",
+								"sysctl -p",
+								"echo 'MTU=1500' >> /etc/sysconfig/network-scripts/ifcfg-eth0",
+								"echo 'request subnet-mask, broadcast-address, time-offset, routers, domain-name, domain-search, domain-name-servers, host-name, nis-domain, nis-servers, ntp-servers;' >> /etc/dhcp/dhclient.conf",
+								"cd /usr/share/nginx/html",
+								"base64 /dev/urandom | head -c 32768 > 32KB.txt",
+								"base64 /dev/urandom | head -c 45056 > 44KB.txt",
+								"base64 /dev/urandom | head -c 65536 > 64KB.txt",
+								"base64 /dev/urandom | head -c 131072 > 128KB.txt",
+								"count=`nproc`",
+								"cd /etc/nginx/",
+								"mv nginx.conf nginx.conf.orig",
+								"openssl req -x509 -nodes -days 365 -newkey rsa:2048 -nodes -out www_example_com.csr -keyout /etc/nginx/nginx-selfsigned.key -subj '/C=US/ST=Georgia/L=Atlanta/O=Fortinet/OU=Lab/CN=www.example.com' -out /etc/nginx/nginx-selfsigned.crt",
+								"echo 'user nginx;' >> /etc/nginx/nginx.conf",
+								"echo \"worker_processes $count;\" >> /etc/nginx/nginx.conf",
+								"echo 'error_log off;' >> /etc/nginx/nginx.conf",
+								"echo 'pid /run/nginx.pid;' >> /etc/nginx/nginx.conf",
+								"echo 'include /usr/share/nginx/modules/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo 'events {worker_connections 2048;}' >> /etc/nginx/nginx.conf",
+								"echo 'http {' >> /etc/nginx/nginx.conf",
+								"echo '    access_log  off;' >> /etc/nginx/nginx.conf",
+								"echo '    sendfile            on;' >> /etc/nginx/nginx.conf",
+								"echo '    tcp_nopush          on;' >> /etc/nginx/nginx.conf",
+								"echo '    tcp_nodelay         on;' >> /etc/nginx/nginx.conf",
+								"echo '    keepalive_timeout   65;' >> /etc/nginx/nginx.conf",
+								"echo '    types_hash_max_size 4096;' >> /etc/nginx/nginx.conf",
+								"echo '    include             /etc/nginx/mime.types;' >> /etc/nginx/nginx.conf",
+								"echo '    default_type        application/octet-stream;' >> /etc/nginx/nginx.conf",
+								"echo '    include /etc/nginx/conf.d/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo '    server {' >> /etc/nginx/nginx.conf",
+								"echo '        listen       80;' >> /etc/nginx/nginx.conf",
+								"echo '        server_name  _;' >> /etc/nginx/nginx.conf",
+								"echo '        root         /usr/share/nginx/html;' >> /etc/nginx/nginx.conf",
+								"echo '        include /etc/nginx/default.d/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 404 /404.html;' >> /etc/nginx/nginx.conf",
+								"echo '        location = /404.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 500 502 503 504 /50x.html;' >> /etc/nginx/nginx.conf",
+								"echo '        location = /50x.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '    }' >> /etc/nginx/nginx.conf",
+								"echo '    server {' >> /etc/nginx/nginx.conf",
+								"echo '        listen       443 ssl http2;' >> /etc/nginx/nginx.conf",
+								"echo '        server_name  _;' >> /etc/nginx/nginx.conf",
+								"echo '        root         /usr/share/nginx/html;' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_certificate '/etc/nginx/nginx-selfsigned.crt';' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_certificate_key '/etc/nginx/nginx-selfsigned.key';' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_session_cache shared:SSL:1m;' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_session_timeout  10m;' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_protocols TLSv1.2;' >> /etc/nginx/nginx.conf",
+								"echo '#        ssl_ciphers PROFILE=SYSTEM;' >> /etc/nginx/nginx.conf",
+								"echo '#        ssl_prefer_server_ciphers on;' >> /etc/nginx/nginx.conf",
+								"echo '        include /etc/nginx/default.d/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 404 /404.html;' >> /etc/nginx/nginx.conf",
+								"echo '            location = /40x.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 500 502 503 504 /50x.html;' >> /etc/nginx/nginx.conf",
+								"echo '            location = /50x.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '    }' >> /etc/nginx/nginx.conf",
+								"echo '}' >> /etc/nginx/nginx.conf",
+								"systemctl restart nginx",
+								"reboot"
+							]
+						]
+					}
+				}
+			}
+		},
+		"WebSrv2Eni0": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port1",
+				"GroupSet": [
+					{
+						"Ref": "DutAllowAllSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "DutPrivSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-WebSrv2Eni0"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth0"
+					}
+				],
+				"PrivateIpAddresses": [
+					{
+						"PrivateIpAddress": {
+							"Ref": "WebSrv2IP"
+						},
+						"Primary": "true"
+					}
+				]
+			}
+		},
+		"WebSrv3": {
+			"Type": "AWS::EC2::Instance",
+			"DependsOn": "GwFgt",
+			"Properties": {
+				"ImageId": {
+					"Fn::GetAtt": [
+						"RunImageFunction3",
+						"ami"
+					]
+				},
+				"InstanceType": {
+					"Ref": "WebSrvInstanceType"
+				},
+				"KeyName": {
+					"Ref": "KeyPair"
+				},
+				"NetworkInterfaces": [
+					{
+						"NetworkInterfaceId": {
+							"Ref": "WebSrv3Eni0"
+						},
+						"DeviceIndex": "0"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-WebSrv3"
+								]
+							]
+						}
+					}
+				],
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": [
+							"\n",
+							[
+								"#!/bin/bash",
+								"yum update -y",
+								"amazon-linux-extras install -y nginx1",
+								"systemctl enable nginx.service",
+								"echo 'net.ipv4.tcp_syncookies=0' >> /etc/sysctl.conf",
+								"echo 'net.ipv4.tcp_max_syn_backlog=65536' >> /etc/sysctl.conf",
+								"echo 'net.core.somaxconn=65536' >> /etc/sysctl.conf",
+								"echo 'net.core.netdev_max_backlog=65536' >> /etc/sysctl.conf",
+								"sysctl -p",
+								"echo 'MTU=1500' >> /etc/sysconfig/network-scripts/ifcfg-eth0",
+								"echo 'request subnet-mask, broadcast-address, time-offset, routers, domain-name, domain-search, domain-name-servers, host-name, nis-domain, nis-servers, ntp-servers;' >> /etc/dhcp/dhclient.conf",
+								"cd /usr/share/nginx/html",
+								"base64 /dev/urandom | head -c 32768 > 32KB.txt",
+								"base64 /dev/urandom | head -c 45056 > 44KB.txt",
+								"base64 /dev/urandom | head -c 65536 > 64KB.txt",
+								"base64 /dev/urandom | head -c 131072 > 128KB.txt",
+								"count=`nproc`",
+								"cd /etc/nginx/",
+								"mv nginx.conf nginx.conf.orig",
+								"openssl req -x509 -nodes -days 365 -newkey rsa:2048 -nodes -out www_example_com.csr -keyout /etc/nginx/nginx-selfsigned.key -subj '/C=US/ST=Georgia/L=Atlanta/O=Fortinet/OU=Lab/CN=www.example.com' -out /etc/nginx/nginx-selfsigned.crt",
+								"echo 'user nginx;' >> /etc/nginx/nginx.conf",
+								"echo \"worker_processes $count;\" >> /etc/nginx/nginx.conf",
+								"echo 'error_log off;' >> /etc/nginx/nginx.conf",
+								"echo 'pid /run/nginx.pid;' >> /etc/nginx/nginx.conf",
+								"echo 'include /usr/share/nginx/modules/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo 'events {worker_connections 2048;}' >> /etc/nginx/nginx.conf",
+								"echo 'http {' >> /etc/nginx/nginx.conf",
+								"echo '    access_log  off;' >> /etc/nginx/nginx.conf",
+								"echo '    sendfile            on;' >> /etc/nginx/nginx.conf",
+								"echo '    tcp_nopush          on;' >> /etc/nginx/nginx.conf",
+								"echo '    tcp_nodelay         on;' >> /etc/nginx/nginx.conf",
+								"echo '    keepalive_timeout   65;' >> /etc/nginx/nginx.conf",
+								"echo '    types_hash_max_size 4096;' >> /etc/nginx/nginx.conf",
+								"echo '    include             /etc/nginx/mime.types;' >> /etc/nginx/nginx.conf",
+								"echo '    default_type        application/octet-stream;' >> /etc/nginx/nginx.conf",
+								"echo '    include /etc/nginx/conf.d/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo '    server {' >> /etc/nginx/nginx.conf",
+								"echo '        listen       80;' >> /etc/nginx/nginx.conf",
+								"echo '        server_name  _;' >> /etc/nginx/nginx.conf",
+								"echo '        root         /usr/share/nginx/html;' >> /etc/nginx/nginx.conf",
+								"echo '        include /etc/nginx/default.d/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 404 /404.html;' >> /etc/nginx/nginx.conf",
+								"echo '        location = /404.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 500 502 503 504 /50x.html;' >> /etc/nginx/nginx.conf",
+								"echo '        location = /50x.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '    }' >> /etc/nginx/nginx.conf",
+								"echo '    server {' >> /etc/nginx/nginx.conf",
+								"echo '        listen       443 ssl http2;' >> /etc/nginx/nginx.conf",
+								"echo '        server_name  _;' >> /etc/nginx/nginx.conf",
+								"echo '        root         /usr/share/nginx/html;' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_certificate '/etc/nginx/nginx-selfsigned.crt';' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_certificate_key '/etc/nginx/nginx-selfsigned.key';' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_session_cache shared:SSL:1m;' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_session_timeout  10m;' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_protocols TLSv1.2;' >> /etc/nginx/nginx.conf",
+								"echo '#        ssl_ciphers PROFILE=SYSTEM;' >> /etc/nginx/nginx.conf",
+								"echo '#        ssl_prefer_server_ciphers on;' >> /etc/nginx/nginx.conf",
+								"echo '        include /etc/nginx/default.d/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 404 /404.html;' >> /etc/nginx/nginx.conf",
+								"echo '            location = /40x.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 500 502 503 504 /50x.html;' >> /etc/nginx/nginx.conf",
+								"echo '            location = /50x.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '    }' >> /etc/nginx/nginx.conf",
+								"echo '}' >> /etc/nginx/nginx.conf",
+								"systemctl restart nginx",
+								"reboot"
+							]
+						]
+					}
+				}
+			}
+		},
+		"WebSrv3Eni0": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port1",
+				"GroupSet": [
+					{
+						"Ref": "DutAllowAllSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "DutPrivSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-WebSrv3Eni0"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth0"
+					}
+				],
+				"PrivateIpAddresses": [
+					{
+						"PrivateIpAddress": {
+							"Ref": "WebSrv3IP"
+						},
+						"Primary": "true"
+					}
+				]
+			}
+		},
+		"WebSrv4": {
+			"Type": "AWS::EC2::Instance",
+			"DependsOn": "GwFgt",
+			"Properties": {
+				"ImageId": {
+					"Fn::GetAtt": [
+						"RunImageFunction3",
+						"ami"
+					]
+				},
+				"InstanceType": {
+					"Ref": "WebSrvInstanceType"
+				},
+				"KeyName": {
+					"Ref": "KeyPair"
+				},
+				"NetworkInterfaces": [
+					{
+						"NetworkInterfaceId": {
+							"Ref": "WebSrv4Eni0"
+						},
+						"DeviceIndex": "0"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-WebSrv4"
+								]
+							]
+						}
+					}
+				],
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": [
+							"\n",
+							[
+								"#!/bin/bash",
+								"yum update -y",
+								"amazon-linux-extras install -y nginx1",
+								"systemctl enable nginx.service",
+								"echo 'net.ipv4.tcp_syncookies=0' >> /etc/sysctl.conf",
+								"echo 'net.ipv4.tcp_max_syn_backlog=65536' >> /etc/sysctl.conf",
+								"echo 'net.core.somaxconn=65536' >> /etc/sysctl.conf",
+								"echo 'net.core.netdev_max_backlog=65536' >> /etc/sysctl.conf",
+								"sysctl -p",
+								"echo 'MTU=1500' >> /etc/sysconfig/network-scripts/ifcfg-eth0",
+								"echo 'request subnet-mask, broadcast-address, time-offset, routers, domain-name, domain-search, domain-name-servers, host-name, nis-domain, nis-servers, ntp-servers;' >> /etc/dhcp/dhclient.conf",
+								"cd /usr/share/nginx/html",
+								"base64 /dev/urandom | head -c 32768 > 32KB.txt",
+								"base64 /dev/urandom | head -c 45056 > 44KB.txt",
+								"base64 /dev/urandom | head -c 65536 > 64KB.txt",
+								"base64 /dev/urandom | head -c 131072 > 128KB.txt",
+								"count=`nproc`",
+								"cd /etc/nginx/",
+								"mv nginx.conf nginx.conf.orig",
+								"openssl req -x509 -nodes -days 365 -newkey rsa:2048 -nodes -out www_example_com.csr -keyout /etc/nginx/nginx-selfsigned.key -subj '/C=US/ST=Georgia/L=Atlanta/O=Fortinet/OU=Lab/CN=www.example.com' -out /etc/nginx/nginx-selfsigned.crt",
+								"echo 'user nginx;' >> /etc/nginx/nginx.conf",
+								"echo \"worker_processes $count;\" >> /etc/nginx/nginx.conf",
+								"echo 'error_log off;' >> /etc/nginx/nginx.conf",
+								"echo 'pid /run/nginx.pid;' >> /etc/nginx/nginx.conf",
+								"echo 'include /usr/share/nginx/modules/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo 'events {worker_connections 2048;}' >> /etc/nginx/nginx.conf",
+								"echo 'http {' >> /etc/nginx/nginx.conf",
+								"echo '    access_log  off;' >> /etc/nginx/nginx.conf",
+								"echo '    sendfile            on;' >> /etc/nginx/nginx.conf",
+								"echo '    tcp_nopush          on;' >> /etc/nginx/nginx.conf",
+								"echo '    tcp_nodelay         on;' >> /etc/nginx/nginx.conf",
+								"echo '    keepalive_timeout   65;' >> /etc/nginx/nginx.conf",
+								"echo '    types_hash_max_size 4096;' >> /etc/nginx/nginx.conf",
+								"echo '    include             /etc/nginx/mime.types;' >> /etc/nginx/nginx.conf",
+								"echo '    default_type        application/octet-stream;' >> /etc/nginx/nginx.conf",
+								"echo '    include /etc/nginx/conf.d/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo '    server {' >> /etc/nginx/nginx.conf",
+								"echo '        listen       80;' >> /etc/nginx/nginx.conf",
+								"echo '        server_name  _;' >> /etc/nginx/nginx.conf",
+								"echo '        root         /usr/share/nginx/html;' >> /etc/nginx/nginx.conf",
+								"echo '        include /etc/nginx/default.d/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 404 /404.html;' >> /etc/nginx/nginx.conf",
+								"echo '        location = /404.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 500 502 503 504 /50x.html;' >> /etc/nginx/nginx.conf",
+								"echo '        location = /50x.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '    }' >> /etc/nginx/nginx.conf",
+								"echo '    server {' >> /etc/nginx/nginx.conf",
+								"echo '        listen       443 ssl http2;' >> /etc/nginx/nginx.conf",
+								"echo '        server_name  _;' >> /etc/nginx/nginx.conf",
+								"echo '        root         /usr/share/nginx/html;' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_certificate '/etc/nginx/nginx-selfsigned.crt';' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_certificate_key '/etc/nginx/nginx-selfsigned.key';' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_session_cache shared:SSL:1m;' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_session_timeout  10m;' >> /etc/nginx/nginx.conf",
+								"echo '        ssl_protocols TLSv1.2;' >> /etc/nginx/nginx.conf",
+								"echo '#        ssl_ciphers PROFILE=SYSTEM;' >> /etc/nginx/nginx.conf",
+								"echo '#        ssl_prefer_server_ciphers on;' >> /etc/nginx/nginx.conf",
+								"echo '        include /etc/nginx/default.d/*.conf;' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 404 /404.html;' >> /etc/nginx/nginx.conf",
+								"echo '            location = /40x.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '        error_page 500 502 503 504 /50x.html;' >> /etc/nginx/nginx.conf",
+								"echo '            location = /50x.html {' >> /etc/nginx/nginx.conf",
+								"echo '        }' >> /etc/nginx/nginx.conf",
+								"echo '    }' >> /etc/nginx/nginx.conf",
+								"echo '}' >> /etc/nginx/nginx.conf",
+								"systemctl restart nginx",
+								"reboot"
+							]
+						]
+					}
+				}
+			}
+		},
+		"WebSrv4Eni0": {
+			"Type": "AWS::EC2::NetworkInterface",
+			"Properties": {
+				"Description": "port1",
+				"GroupSet": [
+					{
+						"Ref": "DutAllowAllSecGrp"
+					}
+				],
+				"SourceDestCheck": "false",
+				"SubnetId": {
+					"Ref": "DutPrivSubnet"
+				},
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+							"Fn::Join": [
+								"",
+								[
+									{
+										"Ref": "AWS::StackName"
+									},
+									"-WebSrv4Eni0"
+								]
+							]
+						}
+					},
+					{
+						"Key": "Interface",
+						"Value": "eth0"
+					}
+				],
+				"PrivateIpAddresses": [
+					{
+						"PrivateIpAddress": {
+							"Ref": "WebSrv4IP"
+						},
+						"Primary": "true"
+					}
+				]
+			}
+		},
+		"LambdaRole": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": [
+									"lambda.amazonaws.com"
+								]
+							},
+							"Action": [
+								"sts:AssumeRole"
+							]
+						}
+					]
+				},
+				"Path": "/",
+				"Policies": [
+					{
+						"PolicyName": "S3AccessRole",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Effect": "Allow",
+									"Action": [
+										"s3:ListBucket",
+										"s3:GetObject",
+										"s3:HeadObject",
+										"s3:DeleteObject",
+										"s3:PutObject",
+										"apigateway:GET",
+										"ec2:DescribeImages"
+									],
+									"Resource": "*"
+								},
+								{
+									"Effect": "Allow",
+									"Action": [
+										"logs:*"
+									],
+									"Resource": "*"
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+		"ImageFunction": {
+			"Type": "AWS::Lambda::Function",
+			"Properties": {
+				"Code": {
+					"ZipFile": {
+						"Fn::Join": [
+							"\n",
+							[
+								"import boto3",
+								"import cfnresponse",
+								"import logging",
+								"import json",
+								"logger = logging.getLogger()",
+								"logger.setLevel(logging.INFO)",
+								"client = boto3.client('ec2')",
+								"",
+								"def handler(event, context):",
+								"    if event['RequestType'] == 'Create':",
+								"        logger.info('<-- event received: {}'.format(json.dumps(event)))",
+								"    else:",
+								"        responseData = {'msg':'200'}",
+								"        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)",
+								"        return None",
+								"",
+								"    try:",
+								"        resp = client.describe_images(",
+								"            Filters=[{'Name': 'name', 'Values': [event['ResourceProperties']['LicenseType']]}],",
+								"            Owners=['137112412989', '785737495101', '210953353124', '071630900071', '656109587541', '910595266909', '679593333241', '464423754048', '211372476111', '345084742485', '874634375141', '939706979954', '769304176199']",
+								"        )",
+								"    except Exception as error:",
+								"        logger.error('<--!! Exception: {}'.format(error))",
+								"        responseData = {'msg':'Exception: {}'.format(error)}",
+								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								"",
+								"    if resp['ResponseMetadata']['HTTPStatusCode'] == 200 and resp['Images'] != []:",
+								"        ami_dict = {}",
+								"        ami_list = []",
+								"        for entry in resp['Images']:",
+								"            key = entry['CreationDate']",
+								"            ami_dict[key] = entry['ImageId']",
+								"        ami_list = sorted(ami_dict, reverse = True)",
+								"        logger.info('--> found latest AMI: {}, {}'.format(ami_dict[ami_list[0]], ami_list[0]))",
+								"        responseData = {'ami': ami_dict[ami_list[0]]}",
+								"        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)",
+								"    else:",
+								"        logger.error('!!--> Unable to find AMI {} in describe_images response! {}'.format(event['ResourceProperties']['LicenseType'],resp))",
+								"        responseData = {'msg':'Unable to find AMI {} in describe_images response! {}'.format(event['ResourceProperties']['LicenseType'],resp)}",
+								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								""
+							]
+						]
+					}
+				},
+				"Role": {
+					"Fn::GetAtt": [
+						"LambdaRole",
+						"Arn"
+					]
+				},
+				"Timeout": 120,
+				"Handler": "index.handler",
+				"Runtime": "python3.9",
+				"MemorySize": 128
+			}
+		},
+		"RunImageFunction1": {
+			"Type": "Custom::ImageFunction",
+			"DependsOn": "ImageFunction",
+			"Properties": {
+				"ServiceToken": {
+					"Fn::GetAtt": [
+						"ImageFunction",
+						"Arn"
+					]
+				},
+				"LicenseType": "FortiGate-VM64-AWS *(7.0.*)*"
+			}
+		},
+		"RunImageFunction2": {
+			"Type": "Custom::ImageFunction",
+			"DependsOn": "ImageFunction",
+			"Properties": {
+				"ServiceToken": {
+					"Fn::GetAtt": [
+						"ImageFunction",
+						"Arn"
+					]
+				},
+				"LicenseType": "FortiGate-VM64-AWSONDEMAND *(7.0.*)*"
+			}
+		},
+		"RunImageFunction3": {
+			"Type": "Custom::ImageFunction",
+			"DependsOn": "ImageFunction",
+			"Properties": {
+				"ServiceToken": {
+					"Fn::GetAtt": [
+						"ImageFunction",
+						"Arn"
+					]
+				},
+				"LicenseType": "amzn2-ami-hvm-2.0.2022*.0-x86_64-gp2"
+			}
+		},
+		"RunImageFunction4": {
+			"Type": "Custom::ImageFunction",
+			"DependsOn": "ImageFunction",
+			"Properties": {
+				"ServiceToken": {
+					"Fn::GetAtt": [
+						"ImageFunction",
+						"Arn"
+					]
+				},
+				"LicenseType": "FortiTester-AWS-BYOL *(4.1.*)*"
+			}
+		}
+	},
+	"Outputs": {
+		"GwFortiGateLoginURL": {
+			"Description": "Login URL for the Gateway FortiGate",
+			"Value": {
+				"Fn::Join": [
+					"",
+					[
+						"https://",
+						{
+							"Ref": "FgtPrimaryEip"
+						}
+					]
+				]
+			}
+		},
+		"GwFortiGateSSLVPNURL": {
+			"Description": "SSL VPN URL for the Gateway FortiGate",
+			"Value": {
+				"Fn::Join": [
+					"",
+					[
+						"https://",
+						{
+							"Ref": "FgtPrimaryEip"
+						},
+						":10443"
+					]
+				]
+			}
+		},
+		"FortiTesterLoginURL": {
+			"Description": "Login URL for FortiTester",
+			"Value": {
+				"Fn::Join": [
+					"",
+					[
+						"https://",
+						{
+							"Ref": "FgtSecondaryEip"
+						}
+					]
+				]
+			}
+		},
+		"FortiTesterHttpCpsTest": {
+			"Description": "S3 URL to a HTTP CPS test case without vRtr, targeting 2 web servers",
+			"Value": "https://hacorp-base.s3.amazonaws.com/perf/HttpCps_App-RouteByGW_4FtsIP-4Web-Srvs.zip"
+		},
+		"FortiTesterHttpsCpsTest": {
+			"Description": "S3 URL to a HTTPS CPS test case with vRtr, targeting 4 web servers",
+			"Value": "https://hacorp-base.s3.amazonaws.com/perf/HttpsCps_App-vRtr_4Web-Srvs.zip"
+		},
+		"DutFortiGate": {
+			"Description": "Login URL for the DUT FortiGate",
+			"Value": {
+				"Fn::Join": [
+					"",
+					[
+						"https://",
+						{
+							"Ref": "FgtTertiaryEip"
+						}
+					]
+				]
+			}
+		}
+	}
+}
